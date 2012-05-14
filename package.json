@@ -1,0 +1,40 @@
+{
+  "name": "soy-grunt-task",
+  "description": "Grunt task to compile Soy / Closure Templates",
+  "version": "0.1.0",
+  "homepage": "https://github.com/hitsthings/soy-grunt-task",
+  "author": {
+    "name": "Adam Ahmed",
+    "email": "hitsthings@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/hitsthings/soy-grunt-task.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hitsthings/soy-grunt-task/issues"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/hitsthings/soy-grunt-task/blob/master/LICENSE-MIT"
+    }
+  ],
+  "main": "grunt.js",
+  "bin": "bin/soy-grunt-task",
+  "engines": {
+    "node": "*"
+  },
+  "scripts": {
+    "test": "grunt test"
+  },
+  "dependencies": {
+    "grunt": "~0.3.9"
+  },
+  "devDependencies": {
+    "grunt": "~0.3.9"
+  },
+  "keywords": [
+    "gruntplugin"
+  ]
+}
