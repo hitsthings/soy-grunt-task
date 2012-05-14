@@ -1,5 +1,5 @@
 {
-  "name": "soy-grunt-task",
+  "name": "grunt-soy",
   "description": "Grunt task to compile Soy / Closure Templates",
   "version": "0.1.0",
   "homepage": "https://github.com/hitsthings/soy-grunt-task",
@@ -21,7 +21,7 @@
     }
   ],
   "main": "grunt.js",
-  "bin": "bin/soy-grunt-task",
+  "bin": "bin/grunt-soy",
   "engines": {
     "node": "*"
   },

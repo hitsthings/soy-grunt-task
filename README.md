@@ -1,14 +1,14 @@
-# grunt-soy-grunt-task
+# soy-grunt-task
 
 Grunt task to compile Soy / Closure Templates
 
 ## Getting Started
-Install this grunt plugin next to your project's [grunt.js gruntfile][getting_started] with: `npm install grunt-soy-grunt-task`
+Install this grunt plugin next to your project's [grunt.js gruntfile][getting_started] with: `npm install grunt-soy`
 
 Then add this line to your project's `grunt.js` gruntfile:
 
 ```javascript
-grunt.loadNpmTasks('grunt-soy-grunt-task');
+grunt.loadNpmTasks('grunt-soy');
 ```
 
 [grunt]: https://github.com/cowboy/grunt
