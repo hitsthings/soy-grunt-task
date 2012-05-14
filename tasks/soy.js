@@ -12,14 +12,20 @@ var fs=require('fs'),
 
 var defaultOutputPathFormat = path.join(process.cwd(), 'public_html/soy/{INPUT_DIRECTORY}/{INPUT_FILE_NAME}.js');
 
-function compile(inputFiles, outputPathFormat, callback) {
+function compile(inputPrefix, inputFiles, outputPathFormat, callback) {
     console.time('compile-soy');
 
-    var java = spawn('java', [
+    var options = [
             '-jar', path.join(__dirname, '../closure-templates-for-javascript-latest/SoyToJsSrcCompiler.jar'),
             '--outputPathFormat', outputPathFormat || defaultOutputPathFormat
-        ].concat(inputFiles)
-    );
+        ];
+
+    if (inputPrefix) {
+        options.push('--inputPrefix');
+        options.push(inputPrefix);
+    }
+
+    var java = spawn('java', options.concat(inputFiles));
 
     java.stdout.pipe(process.stdout);
     java.stderr.pipe(process.stderr);
@@ -61,14 +67,21 @@ function registerGruntTask(grunt) {
             grunt.verbose.writeln("Using specified outputPathFormat: " + outputPathFormat);
         } else {
             outputPathFormat = defaultOutputPathFormat;
-            grunt.verbose.writeln("grunt.soy.outputPathFormat not specified. Using default: " + defaultOutputPathFormat);
+            grunt.verbose.writeln("grunt.soy.[target].outputPathFormat not specified. Using default: " + defaultOutputPathFormat);
+        }
+
+        var inputPrefix = grunt.config(['soy', this.target, 'inputPrefix']);
+        if (inputPrefix) {
+            grunt.verbose.writeln("Using specified inputPrefix: " + inputPrefix);
+        } else {
+            grunt.verbose.writeln("grunt.soy.[target].inputPrefix not specified.");
         }
 
         var files = grunt.file.expandFiles(this.file.src),
             validation = getFilesValidation(grunt, files, this.file.src);
 
         if (validation.error) {
-            grunt.error(validation.error);
+            grunt.log.error(validation.error);
             return;
         } else if (validation.warn) {
             var defaultPattern = '**/*.soy',
@@ -76,16 +89,23 @@ function registerGruntTask(grunt) {
                 tryDefault = getFilesValidation(grunt, defaultFiles);
 
             if (!tryDefault.succeeded) {
-                grunt.warn(validation.warn + '\nNo files were found using the default pattern: ' + defaultPattern);
+                grunt.log.error(validation.warn + '\nNo files were found using the default pattern: ' + defaultPattern);
                 return;
             }
 
-            grunt.warn(validation.warn + '\nUsing default pattern: ' + defaultPattern);
+            grunt.log(validation.warn + '\nUsing default pattern: ' + defaultPattern);
             files = defaultFiles;
         }
 
+        if (inputPrefix) {
+            var resolvedPrefix = path.resolve(inputPrefix);
+            files = files.map(function(file) {
+                return path.relative(resolvedPrefix, path.resolve(file));
+            });
+        }
+
         grunt.verbose.writeln("Compiling files: " + files);
-        compile(files, outputPathFormat, this.async());
+        compile(inputPrefix, files, outputPathFormat, this.async());
 
     });
 }

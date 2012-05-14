@@ -46,7 +46,7 @@ exports['soy'] = {
       cancel = false;
     }, 2000);
 
-    grunt.helper('soy', inputPaths, outputFormat, function() {
+    grunt.helper('soy', null, inputPaths, outputFormat, function() {
       if (cancel) {
         clearTimeout(cancel);
         test.ok(path.existsSync(expectedOut), 'Output js file should exist.');
