@@ -16,7 +16,7 @@ function compile(inputFiles, outputPathFormat, callback) {
     console.time('compile-soy');
 
     var java = spawn('java', [
-            '-jar', path.join(__dirname, 'closure-templates-for-javascript-latest/SoyToJsSrcCompiler.jar'),
+            '-jar', path.join(__dirname, '../closure-templates-for-javascript-latest/SoyToJsSrcCompiler.jar'),
             '--outputPathFormat', outputPathFormat || defaultOutputPathFormat
         ].concat(inputFiles)
     );
