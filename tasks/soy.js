@@ -10,7 +10,7 @@ var fs=require('fs'),
     path = require('path'),
     spawn = require('child_process').spawn;
 
-var defaultOutputPathFormat = path.join(process.cwd(), 'public_html/soy/{INPUT_DIRECTORY}/{INPUT_FILE_NAME}.js');
+var defaultOutputPathFormat = path.join(process.cwd(), 'public/{INPUT_DIRECTORY}/{INPUT_FILE_NAME}.js');
 
 function compile(inputFiles, options, callback) {
     console.time('compile-soy');

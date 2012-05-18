@@ -11,7 +11,7 @@ Then add this line to your project's `grunt.js` gruntfile:
 grunt.loadNpmTasks('grunt-soy');
 ```
 
-Configure the soy task in your initConfig call (these are the defaults):
+Configure the soy task in your initConfig call (everything is optional, these are the defaults):
 
 ```javascript
 grunt.initConfig({
@@ -19,7 +19,7 @@ grunt.initConfig({
     soy : {
     	src: [ '**/*.soy' ],
     	inputPrefix : '',
-    	outputPathFormat : 'public_html/soy/{INPUT_DIRECTORY}/{INPUT_FILE_NAME}.js',
+    	outputPathFormat : 'public/{INPUT_DIRECTORY}/{INPUT_FILE_NAME}.js',
 	}
 	...
 });
