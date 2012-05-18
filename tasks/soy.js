@@ -12,20 +12,22 @@ var fs=require('fs'),
 
 var defaultOutputPathFormat = path.join(process.cwd(), 'public_html/soy/{INPUT_DIRECTORY}/{INPUT_FILE_NAME}.js');
 
-function compile(inputPrefix, inputFiles, outputPathFormat, callback) {
+function compile(inputFiles, options, callback) {
     console.time('compile-soy');
 
-    var options = [
+    options = options || {};
+
+    var cmdOptions = [
             '-jar', path.join(__dirname, '../closure-templates-for-javascript-latest/SoyToJsSrcCompiler.jar'),
-            '--outputPathFormat', outputPathFormat || defaultOutputPathFormat
+            '--outputPathFormat', options.outputPathFormat || defaultOutputPathFormat
         ];
 
-    if (inputPrefix) {
-        options.push('--inputPrefix');
-        options.push(inputPrefix);
+    if (options.inputPrefix) {
+        cmdOptions.push('--inputPrefix');
+        cmdOptions.push(options.inputPrefix);
     }
 
-    var java = spawn('java', options.concat(inputFiles));
+    var java = spawn('java', cmdOptions.concat(inputFiles));
 
     java.stdout.pipe(process.stdout);
     java.stderr.pipe(process.stderr);
@@ -52,7 +54,9 @@ function getFilesValidation(grunt, files, src) {
             succeeded : false,
             warn : 'No input files were provided.  To specify files, add grunt configuration like {\n' +
             '  soy : {\n' +
-            '    myTarget : [ "**/*.soy" ]\n' +
+            '    myTarget : {\n' +
+            '      src : [ "**/*.soy" ]\n' +
+            '    }' +
             '  }\n' +
             '}'
         };
