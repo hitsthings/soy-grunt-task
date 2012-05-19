@@ -25,9 +25,9 @@ grunt.initConfig({
 });
 ```
 
-src : an array of glob patterns for finding input files.  matches standard GruntMultiTask syntax.
-inputPrefix : your src patterns will be resolved against this. It will also be passed to the compiler such that the {INPUT_DIRECTORY} format variable is relative to inputPrefix
-outputPathFormat : A format string for generating output files. Available variables can be found in the [Closure Template docs]: https://developers.google.com/closure/templates/docs/javascript_usage#compilation
+* src : an array of glob patterns for finding input files.  matches standard GruntMultiTask syntax.
+* inputPrefix : your src patterns will be resolved against this. It will also be passed to the compiler such that the {INPUT_DIRECTORY} format variable is relative to inputPrefix
+* outputPathFormat : A format string for generating output files. Available variables can be found in the [Closure Template docs][https://developers.google.com/closure/templates/docs/javascript_usage#compilation]
 
 
 [grunt]: https://github.com/cowboy/grunt
