@@ -5,6 +5,8 @@ var path = require('path');
 
 var mkdirp = require('mkdirp');
 
+var soy = require('../tasks/soy');
+
 //via https://gist.github.com/2367067
 var rmdir = function(dir) {
   var list = fs.readdirSync(dir);
@@ -54,12 +56,8 @@ var expectedOut = outputFormat.replace(/\{(INPUT_FILE_NAME)\}/g, function(match)
   return 'test.soy';
 });
 
-exports['soy'] = {
-  setUp: function(done) {
-    mkdirp(outputDir, done);
-  },
-  'helper': function(test) {
-    test.expect(2);
+function testHelper(test, options, numAssertions, customAssertions) {
+    test.expect(2 + (numAssertions || 0));
 
     var cancel = setTimeout(function() {
       test.ok(false, 'Compilation timed out.');
@@ -67,14 +65,87 @@ exports['soy'] = {
       cancel = false;
     }, 2000);
 
-    grunt.helper('soy', inputPaths, { outputPathFormat : outputFormat }, function() {
+    grunt.helper('soy', inputPaths, options, function() {
       if (cancel) {
         clearTimeout(cancel);
         test.ok(path.existsSync(expectedOut), 'Output js file should exist.');
-        test.ok(fs.readFileSync(expectedOut, 'utf8').indexOf('Success!') >= 0, 'Output contains compiled template.');
+        var content = fs.readFileSync(expectedOut, 'utf8');
+        test.ok(/Success!/.test(content), 'Output contains compiled template.');
+
+        if (customAssertions) {
+          customAssertions(content);
+        }
+
         test.done();
       }
     });
+}
+
+exports['soy'] = {
+  setUp: function(done) {
+    mkdirp(outputDir, done);
+  },
+  'helper-basic': function(test) {
+    testHelper(test, {
+      outputPathFormat : outputFormat
+    });
+  },
+  'helper-inputprefix': function(test) { //DIRTY: this test assumes test file is in test/
+    testHelper(test, {
+      outputPathFormat : path.join(outputDir, '{INPUT_DIRECTORY}/{INPUT_FILE_NAME}.js'),
+      inputPrefix : 'test/'
+    });
+  },
+  'helper-codestyle': function(test) {
+    testHelper(test, {
+      outputPathFormat : outputFormat,
+      codeStyle : 'concat'
+    }, 1, function(content) {
+      test.ok(!/StringBuilder/.test(content), "Output doesn't contain soy.StringBuilder.");
+    });
+  },
+  'helper-jsdoc': function(test) {
+    testHelper(test, {
+      outputPathFormat : outputFormat,
+      shouldGenerateJsdoc : true
+    }, 1, function(content) {
+      test.ok(/@return \{string\}/.test(content), "Output contains JSDoc type annotations.");
+    });
+  },
+  'helper-providerequirenamespaces': function(test) {
+    testHelper(test, {
+      outputPathFormat : outputFormat,
+      shouldProvideRequireSoyNamespaces : true
+    }, 1, function(content) {
+      test.ok(/goog.provide/.test(content), "Output contains goog.provide call.");
+    });
+  },
+  'helper-generatemsgdefs': function(test) {
+    testHelper(test, {
+      outputPathFormat : outputFormat,
+      shouldGenerateGoogMsgDefs : true
+    }, 1, function(content) {
+      test.ok(/goog.getMsg/.test(content), "Output contains goog.getMsg call.");
+    });
+  },
+  'helper-compiletimeglobals': function(test) {
+    testHelper(test, {
+      outputPathFormat : outputFormat,
+      compileTimeGlobalsFile : 'test/globals.txt'
+    }, 1, function(content) {
+      test.ok(/globalremoved/.test(content), "Global variable was evaluated at compile-time.");
+    });
+  },
+  'helper-localized': function(test) {
+    //soy.extractMsgs(inputPaths, { outputFile : 'test/test.xlf' }, function() {
+      testHelper(test, {
+        outputPathFormat : outputFormat,
+        locales : ['en-US', 'en-AU'],
+        messageFilePathFormat : 'test/test.xlf'
+      }, 1, function(content) {
+        test.ok(/localized success!/.test(content), "Output contains localized msgs.");
+      });
+    //});
   },
   tearDown : function(done) {
     rmdir(outputDir);

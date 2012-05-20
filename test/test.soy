@@ -3,5 +3,18 @@
 /**
  */
 {template .basic}
-    Success!
+	Success!
+{/template}
+
+/**
+ */
+{template .global}
+	{globalvar} Success!
+{/template}
+
+/**
+ * @param num {Number}
+ */
+{template .localized}
+    {msg desc="You won!"}${$num} success!{/msg}
 {/template}
