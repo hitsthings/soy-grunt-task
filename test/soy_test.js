@@ -49,14 +49,31 @@ var rmdir = function(dir) {
 */
 
 
-var inputPaths = [ path.join(__dirname, 'test.soy') ];
+var testDotSoy = [ path.join(__dirname, 'test.soy') ];
 var outputDir = path.join(process.cwd(), 'out/test');
 var outputFormat = path.join(outputDir, '{INPUT_FILE_NAME}.js');
-var expectedOut = outputFormat.replace(/\{(INPUT_FILE_NAME)\}/g, function(match) {
+var testDotSoyExpectedOut = outputFormat.replace(/\{(INPUT_FILE_NAME)\}/g, function(match) {
   return 'test.soy';
 });
 
-function testHelper(test, options, numAssertions, customAssertions) {
+function testHelper(test, opt_paths, options, numAssertions, customAssertions) {
+    var inputPaths, expectedOut;
+
+    if (arguments.length < 5) {
+      customAssertions = numAssertions;
+      numAssertions = options;
+      options = opt_paths;
+      opt_paths = undefined;
+    }
+
+    if (opt_paths) {
+      inputPaths = [ opt_paths.src ];
+      expectedOut = opt_paths.dest;
+    } else {
+      inputPaths = testDotSoy;
+      expectedOut = testDotSoyExpectedOut;
+    }
+
     test.expect(2 + (numAssertions || 0));
 
     var cancel = setTimeout(function() {
@@ -112,6 +129,14 @@ exports['soy'] = {
       test.ok(/@return \{string\}/.test(content), "Output contains JSDoc type annotations.");
     });
   },
+  'helper-skip-declaring-tld': function(test) {
+    testHelper(test, {
+      outputPathFormat : outputFormat,
+      shouldDeclareTopLevelNamespaces : false
+    }, 1, function(content) {
+      test.ok(!/var test/.test(content), "test namespace wasn't declared.");
+    });
+  },
   'helper-providerequirenamespaces': function(test) {
     testHelper(test, {
       outputPathFormat : outputFormat,
@@ -123,9 +148,23 @@ exports['soy'] = {
   'helper-generatemsgdefs': function(test) {
     testHelper(test, {
       outputPathFormat : outputFormat,
-      shouldGenerateGoogMsgDefs : true
-    }, 1, function(content) {
+      shouldGenerateGoogMsgDefs : true,
+      googMsgsAreExternal : true,
+      bidiGlobalDir : 1
+    }, 2, function(content) {
       test.ok(/goog.getMsg/.test(content), "Output contains goog.getMsg call.");
+      test.ok(/MSG_EXTERNAL/.test(content), "Output uses MSG_EXTERNAL naming.");
+    });
+  },
+  'helper-generatemsgdefs+googIsRtl': function(test) {
+    testHelper(test, {
+      outputPathFormat : outputFormat,
+      shouldGenerateGoogMsgDefs : true,
+      useGoogIsRtlForBidiGlobalDir : true,
+      shouldProvideRequireSoyNamespaces : true
+    }, 2, function(content) {
+      test.ok(/goog.getMsg/.test(content), "Output contains goog.getMsg call.");
+      test.ok(/goog.i18n.bidi.IS_RTL/.test(content), "goog.i18n.bidi.IS_RTL was used.");
     });
   },
   'helper-compiletimeglobals': function(test) {
@@ -137,7 +176,7 @@ exports['soy'] = {
     });
   },
   'helper-localized': function(test) {
-    //soy.extractMsgs(inputPaths, { outputFile : 'test/test.xlf' }, function() {
+    //soy.extractMsgs(testDotSoy, { outputFile : 'test/test.xlf' }, function() {
       testHelper(test, {
         outputPathFormat : outputFormat,
         locales : ['en-US', 'en-AU'],
@@ -146,6 +185,44 @@ exports['soy'] = {
         test.ok(/localized success!/.test(content), "Output contains localized msgs.");
       });
     //});
+  },
+  'helper-css': function(test) {
+    testHelper(test, {
+      outputPathFormat : outputFormat,
+      cssHandlingScheme : 'reference'
+    }, 1, function(content) {
+      test.ok(/opt_data.aThing/.test(content), "CSS command evaluated as data reference.");
+    });
+  },
+  'helper-ijdata': function(test) {
+    testHelper(test, {
+      outputPathFormat : outputFormat,
+      isUsingIjData : true
+    }, 1, function(content) {
+      test.ok(/opt_ijData/.test(content), "opt_ijData was rendered even though no $ij data was referenced.");
+    });
+  },
+  'helper-plugins': function(test) {
+
+    soy.extractMsgs([path.join(__dirname, 'test-plugins.soy')], { outputFile : 'test/test-plugins.xlf' }, function() {
+    testHelper(test, {
+      src : path.join(__dirname, 'test-plugins.soy'),
+      dest : outputFormat.replace(/\{(INPUT_FILE_NAME)\}/g, function(match) {
+            return 'test-plugins.soy';
+          })
+    }, {
+      outputPathFormat : outputFormat,
+      classpath : path.join(__dirname, 'testing.jar'),
+      messagePluginModule : 'test.MsgPluginModule',
+      pluginModules : ['test.FunctionPluginModule', 'test.DirectivePluginModule'],
+      locales: ['en'],
+      messageFilePathFormat : 'test/test.xlf'
+    }, 3, function(content) {
+      test.ok(/Message Plugin called/.test(content), "Custom msg plugin replaced our text.");
+      test.ok(/SoyFunction called/.test(content), "Custom function replaced our text.");
+      test.ok(/Directive called/.test(content), "Custom print directive replaced our text.");
+    });
+    });
   },
   tearDown : function(done) {
     rmdir(outputDir);

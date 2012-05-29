@@ -1,0 +1,12 @@
+{namespace test}
+
+/**
+ */
+{template .plugins}
+	Success!
+	{testfunc()}
+	{msg desc="Custom msg plugin"}
+		Do yo thang
+	{/msg}
+	{'print this'|testdirective}
+{/template}

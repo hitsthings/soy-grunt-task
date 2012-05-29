@@ -18,3 +18,17 @@
 {template .localized}
     {msg desc="You won!"}${$num} success!{/msg}
 {/template}
+
+/**
+ */
+{template .css}
+	{css $aThing}
+{/template}
+
+/**
+ */
+{template .bidi}
+	{if bidiGlobalDir() == 1}
+		yay!
+	{/if}
+{/template}

@@ -10,6 +10,11 @@ var fs=require('fs'),
     path = require('path'),
     spawn = require('child_process').spawn;
 
+var classpathSeparator = /win32/i.test(process.platform) ? ';' : ':'; 
+
+var jarName = 'SoyToJsSrcCompiler.jar',
+    jarLocation = path.join(__dirname, '../closure-templates-for-javascript-latest', jarName);
+
 var defaults = {
     outputPathFormat : path.join(process.cwd(), 'public/{INPUT_DIRECTORY}/{INPUT_FILE_NAME}.js'),
     inputPrefix : '',
@@ -20,7 +25,19 @@ var defaults = {
     shouldProvideRequireSoyNamespaces : false,
     compileTimeGlobalsFile : undefined,
     shouldGenerateGoogMsgDefs : false,
-    bidiGlobalDir : 1
+    bidiGlobalDir : 0, //accepts 1 (ltr) or -1 (rtl)
+    
+    // Options missing from documentation
+    cssHandlingScheme : undefined, // 'literal', 'reference', 'goog'
+    googMsgsAreExternal : false,
+    isUsingIjData : undefined,
+    messagePluginModule : undefined, //full class reference
+    pluginModules: [], // array of full class reference strings.
+    shouldDeclareTopLevelNamespaces : undefined,
+    useGoogIsRtlForBidiGlobalDir : false,
+
+    // classpath with which to run the compiler. Used in conjunction with messagePluginModule and pluginModules
+    classpath : ''
 };
 
 function extend() {
@@ -35,13 +52,19 @@ function extend() {
     return target;
 }
 
-function compile(inputFiles, options, callback) {
+function compile(inputFiles, options, callback, opt_debugLogger) {
     options = extend({}, defaults, options);
 
-    var cmdOptions = [
-            '-jar', path.join(__dirname, '../closure-templates-for-javascript-latest/SoyToJsSrcCompiler.jar'),
-            '--outputPathFormat', options.outputPathFormat
-        ];
+    var cmdOptions;
+
+    if (!options.classpath && (options.messagePluginModule || (options.pluginModules && options.pluginModules.length))) {
+        callback(new Error("classpath option must be specified when using the messagePluginModule or pluginModules options."));
+        return;
+    }
+
+    cmdOptions = [ '-classpath', (options.classpath ? options.classpath + classpathSeparator : '') + jarLocation  ];
+    cmdOptions = cmdOptions.concat('com.google.template.soy.SoyToJsSrcCompiler');
+    cmdOptions = cmdOptions.concat([ '--outputPathFormat', options.outputPathFormat ]);
 
     if (options.inputPrefix) {
         cmdOptions.push('--inputPrefix');
@@ -75,9 +98,15 @@ function compile(inputFiles, options, callback) {
 
     if (options.shouldGenerateGoogMsgDefs) {
         cmdOptions.push('--shouldGenerateGoogMsgDefs');
+
+        if (options.googMsgsAreExternal) {
+            cmdOptions.push('--googMsgsAreExternal');
+        }
     }
 
-    if (options.bidiGlobalDir) {
+    if (options.useGoogIsRtlForBidiGlobalDir) {
+        cmdOptions.push('--useGoogIsRtlForBidiGlobalDir');
+    } else if (options.bidiGlobalDir) {
         cmdOptions.push('--bidiGlobalDir');
         cmdOptions.push(options.bidiGlobalDir);
     }
@@ -92,8 +121,42 @@ function compile(inputFiles, options, callback) {
         cmdOptions.push(options.codeStyle);
     }
 
+    if (options.cssHandlingScheme) {
+        cmdOptions.push('--cssHandlingScheme');
+        cmdOptions.push(options.cssHandlingScheme);
+    }
+
+    if (options.isUsingIjData) {
+        cmdOptions.push('--isUsingIjData');
+        cmdOptions.push(true);
+    }
+
+    if (options.messagePluginModule) {
+        cmdOptions.push('--messagePluginModule');
+        cmdOptions.push(options.messagePluginModule);
+    }
+
+    if (options.pluginModules && options.pluginModules.length) {
+        cmdOptions.push('--pluginModules');
+        cmdOptions.push(options.pluginModules.join ?
+            options.pluginModules.join(',') :
+            options.pluginModules);
+    }
+
+    if (options.shouldDeclareTopLevelNamespaces !== undefined) {
+        cmdOptions.push('--shouldDeclareTopLevelNamespaces');
+        cmdOptions.push(!!options.shouldDeclareTopLevelNamespaces);
+    }
+
+    cmdOptions = cmdOptions.concat(inputFiles);
+
     console.time('soy-compile');
-    var java = spawn('java', cmdOptions.concat(inputFiles));
+
+    if (opt_debugLogger) {
+        opt_debugLogger('java ' + cmdOptions.join(' '));
+    }
+
+    var java = spawn('java', cmdOptions);
 
     java.stdout.pipe(process.stdout);
     java.stderr.pipe(process.stderr);
@@ -110,7 +173,7 @@ function compile(inputFiles, options, callback) {
     });
 }
 
-function extractMsgs(inputFiles, options, callback) {
+function extractMsgs(inputFiles, options, callback, opt_debugLogger) {
 
     options = options || {};
 
@@ -129,8 +192,14 @@ function extractMsgs(inputFiles, options, callback) {
         return;
     }
 
+    cmdOptions = cmdOptions.concat(inputFiles);
+
     console.time('soy-extract-msg');
-    var java = spawn('java', cmdOptions.concat(inputFiles));
+    var java = spawn('java', cmdOptions);
+
+    if (opt_debugLogger) {
+        opt_debugLogger('java ' + cmdOptions.join(' '));
+    }
 
     java.stdout.pipe(process.stdout);
     java.stderr.pipe(process.stderr);
@@ -230,13 +299,18 @@ function registerGruntTask(grunt) {
         }
 
         grunt.verbose.writeln("Compiling files: " + files);
-        compile(files, compileOptions, this.async());
+        compile(files, compileOptions, this.async(), grunt.verbose.writeln.bind(grunt.verbose));
 
     });
 }
 
 function registerGruntHelper(grunt) {
-    grunt.registerHelper('soy', compile);
+    grunt.registerHelper('soy', function() {
+        var args = Array.prototype.slice.call(arguments);
+        args.push(grunt.verbose.writeln.bind(grunt.verbose));
+
+        return compile.apply(this, args);
+    });
 }
 
 module.exports = function(grunt) {
