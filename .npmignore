@@ -1,3 +1,5 @@
 /node_modules/
 /out/
 /closure-templates-msg-extractor-latest/
+/test/
+/build/
